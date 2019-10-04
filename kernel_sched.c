@@ -514,7 +514,10 @@ void initialize_scheduler()
   rlnode_init(&TIMEOUT_LIST, NULL);
 }
 
+//Ti ginetai otan trexoume ton scheduler
+/*
 
+*/
 
 void run_scheduler()
 {
