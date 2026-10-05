@@ -10,5 +10,4 @@ tinyos_shell
 validate_api
 test_example
 doc/
-launch.json
-settings.json
+*.sublime-*
