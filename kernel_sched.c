@@ -168,6 +168,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 
 	tcb->its = QUANTUM;
 	tcb->rts = QUANTUM;
+	tcb->priority = 0;
 	tcb->last_cause = SCHED_IDLE;
 	tcb->curr_cause = SCHED_IDLE;
 
@@ -225,7 +226,10 @@ void release_TCB(TCB* tcb)
   Both of these structures are protected by @c sched_spinlock.
 */
 
-rlnode SCHED; /* The scheduler queue */
+#define MLFQ_LEVELS 5
+
+rlnode SCHED[MLFQ_LEVELS]; /* The scheduler queue */
+
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 
@@ -268,7 +272,8 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 static void sched_queue_add(TCB* tcb)
 {
 	/* Insert at the end of the scheduling list */
-	rlist_push_back(&SCHED, &tcb->sched_node);
+	// For now, everything new, goes to the top, we are being generous (mostly because I am not sure what to do :) )
+	rlist_push_back(&SCHED[tcb->priority], &tcb->sched_node);
 
 	/* Restart possibly halted cores */
 	cpu_core_restart_one();
@@ -278,6 +283,7 @@ static void sched_queue_add(TCB* tcb)
 	Adjust the state of a thread to make it READY.
 
 	*** MUST BE CALLED WITH sched_spinlock HELD ***
+	TODO: Is it though? 
  */
 static void sched_make_ready(TCB* tcb)
 {
@@ -327,9 +333,17 @@ static void sched_wakeup_expired_timeouts()
 static TCB* sched_queue_select(TCB* current)
 {
 	/* Get the head of the SCHED list */
-	rlnode* sel = rlist_pop_front(&SCHED);
+	rlnode* sel = NULL;
 
-	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
+	// Check queues for remaining threads to be scheduled
+	for (unsigned int i = 0; i < MLFQ_LEVELS; i++) {
+    	if (!is_rlist_empty(&SCHED[i])) {
+        	sel = rlist_pop_front(&SCHED[i]);
+        	break;
+    	}
+	}
+
+	TCB* next_thread = (sel != NULL) ? sel->tcb : NULL; /* When the list is empty, this is NULL, and also now it can SEGFAULT :) */
 
 	if (next_thread == NULL)
 		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
@@ -423,6 +437,12 @@ void yield(enum SCHED_CAUSE cause)
 	current->rts = remaining;
 	current->last_cause = current->curr_cause;
 	current->curr_cause = cause;
+
+	// TODO: Extract that, and possibly modify it, but atm just testing
+	//TODO: Since I said testing, a small testing bed would be nice (give different tasks, MEASURE how different algos do)
+	if (current->curr_cause == SCHED_QUANTUM && current->priority < MLFQ_LEVELS - 1) {
+    	current->priority++;
+	}
 
 	/* Wake up threads whose sleep timeout has expired */
 	sched_wakeup_expired_timeouts();
@@ -521,7 +541,9 @@ static void idle_thread()
  */
 void initialize_scheduler()
 {
-	rlnode_init(&SCHED, NULL);
+	for (int i = 0; i < MLFQ_LEVELS; i++){
+		rlnode_init(&SCHED[i], NULL);
+	}
 	rlnode_init(&TIMEOUT_LIST, NULL);
 }
 
