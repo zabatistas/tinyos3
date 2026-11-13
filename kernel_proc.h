@@ -62,6 +62,25 @@ typedef struct process_control_block {
 
 } PCB;
 
+// TODO: Write proper documentatio
+// PTCB
+typedef struct process_thread_control_block {
+  PCB *pcb;
+  TCB *tcb;
+
+  Task task;
+  int argl;
+  void *args;
+
+  int exitval;
+  int detached;
+
+  CondVar exit_cv;
+  rlnode ptcb_node;
+};
+
+
+
 
 /**
   @brief Initialize the process table.
