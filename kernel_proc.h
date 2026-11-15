@@ -60,6 +60,12 @@ typedef struct process_control_block {
 
   FCB* FIDT[MAX_FILEID];  /**< @brief The fileid table of the process */
 
+  rlnode ptcb_list;
+
+  uint thread_count;
+
+  
+
 } PCB;
 
 // TODO: Write proper documentatio
