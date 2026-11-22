@@ -335,6 +335,10 @@ static TCB* sched_queue_select(TCB* current)
 	/* Get the head of the SCHED list */
 	rlnode* sel = NULL;
 
+	// SMALL BUT KINDA IMPORTANT: If current is ready and it has the greatest prio, we don't 
+	// pick it
+	unsigned int max_level = (current->state == READY && current->type != IDLE_THREAD)? current->priority: MLFQ_LEVELS;
+
 	// Check queues for remaining threads to be scheduled
 	for (unsigned int i = 0; i < MLFQ_LEVELS; i++) {
     	if (!is_rlist_empty(&SCHED[i])) {
