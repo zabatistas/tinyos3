@@ -573,6 +573,8 @@ void run_scheduler()
 	curcore->idle_thread.curr_cause = SCHED_IDLE;
 	curcore->idle_thread.last_cause = SCHED_IDLE;
 
+	curcore->idle_thread.priority = 0;
+
 	/* Initialize interrupt handler */
 	cpu_interrupt_handler(ALARM, yield_handler);
 	cpu_interrupt_handler(ICI, ici_handler);
