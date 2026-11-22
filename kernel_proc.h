@@ -78,14 +78,24 @@ typedef struct process_thread_control_block {
   int argl;
   void *args;
 
-  int exitval;
-  int detached;
+  int exitval; // the exit val of the thread 
+  int exited; // 1 if exited, 0 otherwise
+  int detached; // 1 if detached, 0 otherwise
+
+  int refcount; // Threads waiting in refcount
 
   CondVar exit_cv;
   rlnode ptcb_node;
-};
+} PTCB;
 
 
+// PTCB helper funcs
+PTCB* acquire_PTCB(TCB* tcb, Task call, int argl, void* args);
+void release_PTCB(PTCB* ptcb);
+void cleanup_ptcb_list(PCB* pcb);
+
+// Parrt of refactoring of Thread_Exit
+void cleanup_process(PCB* curproc);
 
 
 /**
