@@ -227,6 +227,28 @@ void release_TCB(TCB* tcb)
 */
 
 #define MLFQ_LEVELS 5
+#define BOOST_INTERVAL (100 * QUANTUM) /* This was set arbitrarily*/
+
+static TimerDuration last_boost_time = 0;
+
+static void sched_prio_boost() {
+	TimerDuration now = bios_clock();
+
+	if (now - last_boost_time < BOOST_INTERVAL){
+		return;
+	}
+    last_boost_time = now;
+
+	// BOOOOOOOOOOOST
+	for (unsigned int i = 1; i < MLFQ_LEVELS; i++) {
+        while (!is_rlist_empty(&SCHED[i])) {
+            rlnode* n = rlist_pop_front(&SCHED[i]);
+            n->tcb->priority = 0;
+            rlist_push_back(&SCHED[0], n);
+        }
+    }
+}
+
 
 rlnode SCHED[MLFQ_LEVELS]; /* The scheduler queue */
 
@@ -467,6 +489,9 @@ void yield(enum SCHED_CAUSE cause)
 	/* Wake up threads whose sleep timeout has expired */
 	sched_wakeup_expired_timeouts();
 
+	/*Check if its time to boost our prio*/
+	sched_priority_boost();
+
 	/* Get next */
 	TCB* next = sched_queue_select(current);
 	assert(next != NULL);
@@ -537,6 +562,7 @@ void gain(int preempt)
 		preempt_on;
 
 	/* Set a 1-quantum alarm */
+	// Is it still 1??
 	bios_set_timer(current->rts);
 }
 
