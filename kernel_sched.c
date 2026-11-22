@@ -352,8 +352,12 @@ static TCB* sched_queue_select(TCB* current)
 	if (next_thread == NULL)
 		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
 
-	next_thread->its = QUANTUM + (QUANTUM * next_thread->priority);
 
+	// Maybe add a check for !idle_thread??
+	if (next_thread->type != IDLE_THREAD){
+		next_thread->its = QUANTUM + (QUANTUM * next_thread->priority);
+	}
+	
 	return next_thread;
 }
 
