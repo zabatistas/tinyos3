@@ -11,3 +11,11 @@ validate_api
 test_example
 doc/
 *.sublime-*
+# IDE
+.idea/
+
+# Documentation
+docs/
+
+# Generated files
+*.rdi
