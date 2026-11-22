@@ -284,6 +284,7 @@ static void sched_queue_add(TCB* tcb)
 
 	*** MUST BE CALLED WITH sched_spinlock HELD ***
 	TODO: Is it though? 
+
  */
 static void sched_make_ready(TCB* tcb)
 {
@@ -446,10 +447,21 @@ void yield(enum SCHED_CAUSE cause)
 	current->last_cause = current->curr_cause;
 	current->curr_cause = cause;
 
-	// TODO: Extract that, and possibly modify it, but atm just testing
-	//TODO: Since I said testing, a small testing bed would be nice (give different tasks, MEASURE how different algos do)
+	// TODO: Since I said testing, a small testing bed would be nice (give different tasks, 
+	// MEASURE how different algos do)
+	// Also: switch here, instead of if statement?
 	if (current->curr_cause == SCHED_QUANTUM && current->priority < MLFQ_LEVELS - 1) {
     	current->priority++;
+	}
+
+	// Maybe some promotion too :)
+	if ((current->curr_cause == SCHED_IO || cause == SCHED_PIPE) && current->priority > 0) {
+    	current->priority--;
+	}
+
+	// Last one: account for mutex from another thread!
+	if (current->curr_cause == SCHED_MUTEX && current->last_cause == SCHED_MUTEX && current->priority < MLFQ_LEVELS - 1) {
+		current->priority++;
 	}
 
 	/* Wake up threads whose sleep timeout has expired */
