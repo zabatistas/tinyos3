@@ -227,6 +227,21 @@ void release_TCB(TCB* tcb)
 */
 
 #define MLFQ_LEVELS 5
+
+
+rlnode SCHED[MLFQ_LEVELS]; /* The scheduler queue */
+
+rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
+Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
+
+/* Interrupt handler for ALARM */
+void yield_handler() { yield(SCHED_QUANTUM); }
+
+/* Interrupt handle for inter-core interrupts */
+void ici_handler()
+{ /* noop for now... */
+}
+
 #define BOOST_INTERVAL (100 * QUANTUM) /* This was set arbitrarily*/
 
 static TimerDuration last_boost_time = 0;
@@ -247,20 +262,6 @@ static void sched_prio_boost() {
             rlist_push_back(&SCHED[0], n);
         }
     }
-}
-
-
-rlnode SCHED[MLFQ_LEVELS]; /* The scheduler queue */
-
-rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
-Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
-
-/* Interrupt handler for ALARM */
-void yield_handler() { yield(SCHED_QUANTUM); }
-
-/* Interrupt handle for inter-core interrupts */
-void ici_handler()
-{ /* noop for now... */
 }
 
 /*
@@ -363,7 +364,7 @@ static TCB* sched_queue_select(TCB* current)
 	unsigned int max_level = (current->state == READY && current->type != IDLE_THREAD)? current->priority: MLFQ_LEVELS;
 
 	// Check queues for remaining threads to be scheduled
-	for (unsigned int i = 0; i < MLFQ_LEVELS; i++) {
+	for (unsigned int i = 0; i < max_level; i++) {
     	if (!is_rlist_empty(&SCHED[i])) {
         	sel = rlist_pop_front(&SCHED[i]);
         	break;
@@ -490,7 +491,7 @@ void yield(enum SCHED_CAUSE cause)
 	sched_wakeup_expired_timeouts();
 
 	/*Check if its time to boost our prio*/
-	sched_priority_boost();
+	sched_prio_boost();
 
 	/* Get next */
 	TCB* next = sched_queue_select(current);
